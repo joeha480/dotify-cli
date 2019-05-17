@@ -2,9 +2,11 @@ package org.daisy.dotify.cli;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.daisy.dotify.api.embosser.EmbosserCatalog;
 import org.daisy.dotify.api.factory.FactoryProperties;
@@ -12,6 +14,9 @@ import org.daisy.dotify.api.factory.FactoryProperties.ComparatorBuilder.SortProp
 import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMaker;
 import org.daisy.dotify.api.paper.PaperCatalog;
 import org.daisy.dotify.api.table.TableCatalog;
+import org.daisy.dotify.api.translator.BrailleTranslatorFactoryMaker;
+import org.daisy.dotify.api.translator.TranslatorSpecification;
+import org.daisy.dotify.api.translator.TranslatorType;
 import org.daisy.streamline.cli.Argument;
 import org.daisy.streamline.cli.CommandDetails;
 import org.daisy.streamline.cli.CommandParser;
@@ -38,6 +43,7 @@ class ListStuff implements CommandDetails {
 	private static final String TABLES_KEY = "tables";
 	private static final String PAPERS_KEY = "papers";
 	private static final String HYPHENATORS_KEY = "hyphenators";
+	private static final String TRANSLATORS_KEY = "translators";
 	private static final String MODE_KEY = "mode";
 	private static final String PREFIX_KEY = "prefix";
 	private static final String POSTFIX_KEY = "postfix";
@@ -50,6 +56,7 @@ class ListStuff implements CommandDetails {
 		defs.add(new Definition(TABLES_KEY, "to list available tables"));
 		defs.add(new Definition(PAPERS_KEY, "to list available papers"));
 		defs.add(new Definition(HYPHENATORS_KEY, "to list available hyphenators"));
+		defs.add(new Definition(TRANSLATORS_KEY, "to list available translators"));
 		reqArgs.add(new Argument("type_of_objects", "What to list", defs));
 		optionalArgs = new ArrayList<OptionalArgument>();
 		ArrayList<Definition> modes = new ArrayList<Definition>();
@@ -113,6 +120,29 @@ class ListStuff implements CommandDetails {
 					return new FactoryPropertiesAdapter(l.toLanguageTag(), l.getDisplayName());
 				}).toArray(FactoryProperties[]::new);
 			printList(ha, mode, prefix, separator, postfix);
+		} else if (TRANSLATORS_KEY.equalsIgnoreCase(type)) {
+			BrailleTranslatorFactoryMaker tr = BrailleTranslatorFactoryMaker.newInstance();
+			Map<String, List<TranslatorSpecification>> map = tr.listSpecifications().stream()
+					.filter(v->v.getModeDetails().getType().map(v2->v2!=TranslatorType.BYPASS).orElse(true))
+				.reduce(new HashMap<String, List<TranslatorSpecification>>(),
+					(x1, x2)->{
+						List<TranslatorSpecification> s = x1.get(x2.getLocale());
+						if (s==null) {
+							s = new ArrayList<>();
+							x1.put(x2.getLocale(), s);
+						}
+						s.add(x2);
+						return x1;
+					}, 
+					(x1, x2)->{
+						x1.putAll(x2);
+						return x1;
+					});
+			FactoryProperties[] ta =map.keySet().stream()
+					.sorted((v1, v2)->v1.compareTo(v2))
+			.map(key->new FactoryPropertiesAdapter(key, map.get(key).stream().map(v->v.getModeDetails().getIdentifier()).collect(Collectors.joining("/"))))
+			.toArray(FactoryProperties[]::new);
+			printList(ta, mode, prefix, separator, postfix);
 		}
 	}
 	
