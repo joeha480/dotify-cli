@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -20,9 +21,12 @@ import org.daisy.dotify.Dotify;
 import org.daisy.dotify.SystemKeys;
 import org.daisy.dotify.api.embosser.EmbosserCatalog;
 import org.daisy.dotify.api.embosser.EmbosserFactoryException;
+import org.daisy.dotify.api.hyphenator.HyphenatorFactoryMaker;
+import org.daisy.dotify.api.text.Integer2TextFactoryMaker;
 import org.daisy.dotify.api.translator.BrailleTranslatorFactoryMaker;
 import org.daisy.dotify.api.translator.TranslatorType;
 import org.daisy.dotify.common.text.FilterLocale;
+import org.daisy.dotify.tasks.impl.input.xml.XMLL10nResourceLocator;
 import org.daisy.streamline.api.config.ConfigurationDetails;
 import org.daisy.streamline.api.config.ConfigurationsCatalog;
 import org.daisy.streamline.api.identity.IdentityProvider;
@@ -52,6 +56,7 @@ public class Convert implements CommandDetails {
 	//private static final String DEFAULT_TEMPLATE = "A4-w32";
 	private static final String DEFAULT_LOCALE = Locale.getDefault().toString().replaceAll("_", "-");
 	private static final String CONFIG_KEY = "configs";
+	private static final String CONFIG_WIKI_KEY = "config-wiki";
 	private static final String WATCH_KEY = "watch";
 	protected static final String META_KEY = "meta";
 	
@@ -95,6 +100,39 @@ public class Convert implements CommandDetails {
 					.sorted()
 					.map(ts->"" + ts.getLocale() + ", " + ts.getMode())
 					.forEach(System.out::println);
+				ExitCode.OK.exitSystem();
+			} else if (CONFIG_WIKI_KEY.equals(result.getOptional().get(META_KEY))) {
+				System.out.println("Known configurations (locale, braille mode):");
+				Set<String> uiLoc = new HashSet<>();
+				uiLoc.add("en");
+				uiLoc.add("sv");
+				uiLoc.add("sv-SE");
+				uiLoc.add("no");
+				
+				Set<String> textsLoc = XMLL10nResourceLocator.getInstance().listSupportedLocales();
+				Set<String> writtenNumbersLoc = Integer2TextFactoryMaker.newInstance().listLocales().stream().collect(Collectors.toSet());
+				
+				Set<String> trLoc = BrailleTranslatorFactoryMaker.newInstance().listSpecifications().stream()
+					.filter(ts->ts.getModeDetails().getType().map(v2->v2!=TranslatorType.BYPASS&&v2!=TranslatorType.PRE_TRANSLATED).orElse(true))
+					.map(v->v.getLocale())
+					.collect(Collectors.toSet());
+				Set<String> hyphLoc = HyphenatorFactoryMaker.newInstance().listLocales()
+						.stream()
+						.collect(Collectors.toSet());
+				Set<String> all = new HashSet<>(trLoc);
+				all.addAll(hyphLoc);
+				all.stream()
+				.filter(v->!v.equals(Locale.forLanguageTag(v).getDisplayName(Locale.ENGLISH)))
+				.sorted((v1, v2)->Locale.forLanguageTag(v1).getDisplayName(Locale.ENGLISH).compareTo(Locale.forLanguageTag(v2).getDisplayName(Locale.ENGLISH)))
+				.map(v->String.format("|%s|%s|%s|%s|%s|%s|",
+							Locale.forLanguageTag(v).getDisplayName(Locale.ENGLISH),
+							(uiLoc.contains(v)?"&#x2713;":" "),
+							(trLoc.contains(v)?"&#x2713;":" "),
+							(hyphLoc.contains(v)?"&#x2713;":" "),
+							(textsLoc.contains(v)?"&#x2713;":" "),
+							(writtenNumbersLoc.contains(v)?"&#x2713;":" ")
+						))
+				.forEach(System.out::println);
 				ExitCode.OK.exitSystem();
 			} else {
 				System.out.println("Expected at least two arguments");
