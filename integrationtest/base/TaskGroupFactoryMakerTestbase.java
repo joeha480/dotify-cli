@@ -8,7 +8,6 @@ import java.util.Set;
 
 import org.daisy.streamline.api.tasks.TaskGroupFactoryMakerService;
 import org.daisy.streamline.api.tasks.TaskGroupInformation;
-import org.daisy.dotify.common.text.FilterLocale;
 import org.junit.Test;
 
 @SuppressWarnings("javadoc")
@@ -32,18 +31,16 @@ public abstract class TaskGroupFactoryMakerTestbase {
 		Set<TaskGroupInformation> specs = factory.listAll();
 
 		//Test
-		assertEquals(10, specs.size());
+		assertEquals(8, specs.size());
 		
 		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("text", "obfl").build()));
-		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("txt", "obfl").build()));
-		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("text", "html").build()));
-		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("txt", "html").build()));
-		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("epub", "html").build()));
+		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("text", "xhtml").build()));
+		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("epub", "xhtml").build()));
 		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("obfl", "formatted-text").build()));
 		
 		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("dtbook", "obfl").build()));
 		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("xml", "obfl").build()));
-		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("html", "obfl").build()));
+		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("xhtml", "obfl").build()));
 		assertTrue(specs.contains(TaskGroupInformation.newConvertBuilder("obfl", "pef").build()));
 
 	}
@@ -56,7 +53,6 @@ public abstract class TaskGroupFactoryMakerTestbase {
 		//Test
 		assertNotNull(factory.getFactory(TaskGroupInformation.newConvertBuilder("xml", "obfl").build()));
 		assertNotNull(factory.getFactory(TaskGroupInformation.newConvertBuilder("text", "obfl").build()));
-		assertNotNull(factory.getFactory(TaskGroupInformation.newConvertBuilder("txt", "obfl").build()));
 		assertNotNull(factory.getFactory(TaskGroupInformation.newConvertBuilder("dtbook", "obfl").build()));
 	}
 
