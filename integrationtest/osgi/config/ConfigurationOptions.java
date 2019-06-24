@@ -6,8 +6,10 @@ import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.util.Optional;
 
 import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.options.MavenArtifactProvisionOption;
 
 @SuppressWarnings("javadoc")
 public abstract class ConfigurationOptions {
@@ -61,8 +63,8 @@ public abstract class ConfigurationOptions {
 		return composite(
 				dotifyHyphenator(),
 				MavenRepo.CENTRAL.get("net.java.dev.jna", "jna", "5.2.0"),
-				MavenRepo.CENTRAL.get("org.liblouis", "liblouis-java", "4.1.0"),
-				MavenRepo.SONATYPE_STAGING.get("org.daisy.dotify", "dotify.translator.impl", "5.1.0")
+				MavenRepo.CENTRAL.get("org.liblouis", "liblouis-java", "4.2.0", "standalone"),
+				MavenRepo.CENTRAL.get("org.daisy.dotify", "dotify.translator.impl", "5.1.0")
 			);
 	}
 	
@@ -127,20 +129,28 @@ public abstract class ConfigurationOptions {
 		LOCAL;
 		
 		Option get(String group, String artifact, String version) {
+			return get(group, artifact, version, null);
+		}
+		
+		Option get(String group, String artifact, String version, String classifier) {
 			switch(this) {
 				case LOCAL:
-					return local(group, artifact, version);
+					return local(group, artifact, version, classifier);
 				case SONATYPE_STAGING:
-					return sonatypeStaging(group, artifact, version);
+					return sonatypeStaging(group, artifact, version, classifier);
 				case CENTRAL: default:
-					return mavenBundle().groupId(group).artifactId(artifact).version(version);
+					MavenArtifactProvisionOption ret = mavenBundle().groupId(group).artifactId(artifact).version(version);
+					Optional.ofNullable(classifier).ifPresent(v->ret.classifier(v));
+					return ret;
 			}
 		}
 		
-		static Option sonatypeStaging(String group, String artifact, String version) {
+		static Option sonatypeStaging(String group, String artifact, String version, String classifier) {
 			String path = group.replaceAll("\\.", "/");
 			return bundle("https://oss.sonatype.org/content/groups/staging/"+path+
-					"/"+artifact+"/"+version+"/"+artifact+"-"+version+".jar");
+					"/"+artifact+"/"+version+"/"+artifact+"-"+version
+					+ Optional.ofNullable(classifier).map(v->"-"+v).orElse("")
+					+ ".jar");
 		}
 		
 		static File mavenLocal = null;
@@ -156,12 +166,14 @@ public abstract class ConfigurationOptions {
 			return mavenLocal;
 		}
 		
-		static Option local(String group, String artifact, String version) {
+		static Option local(String group, String artifact, String version, String classifier) {
 			try {
 				String path = group.replaceAll("\\.", "/");
 				String localPath = getMavenLocal().toURI().toURL().toExternalForm();
 				return bundle(localPath+path+
-						"/"+artifact+"/"+version+"/"+artifact+"-"+version+".jar");
+						"/"+artifact+"/"+version+"/"+artifact+"-"+version
+						+ Optional.ofNullable(classifier).map(v->"-"+v).orElse("")
+						+ ".jar");
 			} catch (MalformedURLException e) {
 				throw new RuntimeException(e);
 			}
